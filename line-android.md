@@ -1,98 +1,96 @@
-LINE instant messenger protocol - Android version
+LINEインスタントメッセンジャープロトコル -  Androidバージョン
 =================================================
 
 Matti Virkkunen <mvirkkunen@gmail.com>
 
-Document is accurate as of 2015-04-02 (LINE 5.0.4)
+文書は2015-04-02（LINE 5.0.4）の時点で正確です。
 
-This document describes the custom protocols used by the Android version of LINE. It's meant to be a
-companion to line-protocol.md, as it mostly describes the differences.
+このドキュメントではAndroidバージョンのLINEで使用されるカスタムプロトコルについて説明します。それは
+それは主に違いを記述しているので、line-protocol.mdに付いてください。
 
-Overview
+概要
 --------
 
-The Android version of LINE also uses Apache Thrift as the serialization format for most of its
-communications. There are however significant differences. This makes the total protocol suite more
-complicated, but it saves a lot of bandwidth, which is presumably their main goal. The mobile
-versions of LINE have vastly more users than the desktop versions, so it makes sense to primarily
-optimize them.
+LINEのAndroid版では、Apache Thriftをほとんどの場合のシリアライズ形式として使用しています
+コミュニケーションしかし、大きな違いがあります。これにより、トータルのプロトコルスイートが
+おそらく彼らの主な目標である、多くの帯域幅を節約します。モバイル
+LINEのバージョンはデスクトップ版よりもはるかに多くのユーザーを持っているため、主に
+それらを最適化する。
 
-SPDY instead of HTTP
+HTTPではなくSPDY
 --------------------
 
-The Android client primarily uses SPDY (Draft 2) instead of HTTP. This has numerous advantages, for
-instance the ability to use one TCP stream for multiple transactions and header compression.
+Androidクライアントは、主にHTTPの代わりにSPDY（ドラフト2）を使用します。これには多くの利点があります。
+複数のトランザクションとヘッダー圧縮に1つのTCPストリームを使用することができます。
 
-Custom SPDY encryption
+カスタムSPDY暗号化
 ----------------------
 
-SPDY is normally encrypted using standard SSL, but LINE implements its own custom encryption. Their
-justification for it is that it does away with SSL handshakes and overhead and therefore puts less
-of a burder on mobile devices and networks.
+SPDYは通常標準SSLを使用して暗号化されていますが、LINEは独自のカスタム暗号化を実装しています。彼らの
+その理由は、SSLハンドシェイクとオーバーヘッドを排除するため、
+モバイルデバイスとネットワークの負担の大きさ。
 
-The encryption scheme encrypts the body part of the SPDY request only. The standard headers portion
-of SPDY is left unencrypted, but the body can also optionally contain encrypted headers.
+暗号化方式は、SPDY要求の本体部分のみを暗号化します。標準ヘッダー部分
+SPDYの暗号化は暗号化されずに残されますが、本文に暗号化されたヘッダーもオプションで含めることができます。
 
-When the client connects to the server, it generates a 128 bit random key, encrypts it with an RSA
-public key, and sends it to the server as a header with the first request. This key is used by both
-the client and the server to encrypt the body with AES in CBC mode with a fixed IV. The AES context
-is reset for each message. Cryptanalysts may have something to say about the fixed IV and new
-context for each message.
+クライアントがサーバーに接続すると、128ビットのランダムキーが生成され、RSAで暗号化されます
+公開鍵で暗号化し、最初の要求でヘッダーとしてサーバーに送信します。このキーは両方で使用されます
+クライアントとサーバーはCBCモードでAESを使用してボディを固定IVで暗号化します。 AESの文脈
+メッセージごとにリセットされます。暗号解読者は固定IVと新しい
+各メッセージのコンテキスト。
 
-The AES encrypted messages are signed with a custom 32-bit HMAC called legy_hmac, which is curiously
-only available in native code. I haven't yet analyzed how it works. I am not sure if the native
-library approach is taken to enable code re-use between platforms, or as some futile attempt to add
-security by obscurity. It seems to be built on this hash algorithm:
+AESで暗号化されたメッセージは、legy_hmacというカスタムの32ビットHMACで署名されています。これは不思議です
+ネイティブコードでのみ利用可能です。私はまだそれがどのように動作するか分析していない。私は、ネイティブ
+ライブラリのアプローチは、プラットフォーム間でのコードの再利用を可能にするために、または追加する無駄な試みとして
+暗黙のセキュリティ。これは、このハッシュアルゴリズムで構築されているようです：
 
 https://github.com/Cyan4973/xxHash
-
-Interestingly they seem to have forgotten to include the copyright notice for xxHash in their app.
+興味深いことに、彼らは自分のアプリにxxHashの著作権表示を含めることを忘れてしまったようです。
 
 (TODO)
 
-(TODO attach: RSA key and AES IV)
+(TODO アタッチ: RSA keyとAES IV)
 
-(TODO add example code: custom encryption)
+(TODO サンプルコードの追加: カスタム暗号化)
 
-(TODO add example code: legy_hmac implementation)
+(TODO サンプルコードの追加: legy_hmac実装)
 
-Authentication
+認証
 --------------
+LINEのモバイル版では、ユーザーが手動でアカウントを登録する必要はありません。
+アプリが最初にインストールされたときに自動的に生成されます。したがって、ユーザー認証方法は
+また異なる。
 
-The mobile version of LINE does not require the user to manually register an account - one is
-automatically generated when the app is first installed. Therefore the user authentication method is
-also different.
+Androidクライアントは、LINEサーバーに認証するために使用される15バイトの認証キーを格納します。
+キーは暗号化された設定データベースに保存されますが、明らかに、アプリは
+それを読んで、これは回避するのは簡単です（それは本質的に8ビットの暗号化キーを使用することが判明しますが、
+電話機のANDROID_ID値から生成されます）。 authキーは、アプリが
+最初にインストールされ、変更されていないようです。
 
-The Android client stores a 15 byte auth key which is used to authenticate it to the LINE servers.
-The key is stored in an encrypted settings database, but obviously since the app needs to be able to
-read it, this is easy to circumvent (it turns out they essentially use an 8-bit encryption key,
-which is generated from the phone's ANDROID_ID value). The auth key is likely generated when the app
-is first installed and it does not seem to ever change.
+tools / view-android-settings.pyスクリプトを使用して、アカウントの認証キーを表示することができます。それ
+LINE設定のSQLiteデータベースと、オプションでANDROID_IDが必要です（これをブルートフォースすることもできます
+現代のコンピュータでは約1ミリ秒かかる）。私の電話のデータベースは次の場所にあります：
 
-You can use the tools/view-android-settings.py script to view the auth key for your account. It
-needs the LINE settings SQLite database and optionally the ANDROID_ID (it can also bruteforce it
-which takes about a millisecond on a modern computer). The database on my phone is located at:
 
 /data/data/jp.naver.line.android/databases/naver_line
 
-The displayed user MID and auth key are used to generate an authentication token whenever the client
-connects to the server.
+表示されたユーザMIDおよび認証キーは、クライアント
+サーバーに接続します。
 
 (TODO)
 
-(TODO add example code: mobile authentication token generation)
+(TODO サンプルコードの追加: モバイル認証トークンの生成)
 
-Custom Thrift protocol
+カスタムスリフトプロトコル
 ----------------------
 
-The custom protocol, among other things, stores GUIDs (which are used as user IDs throughout the
-system) as binary instead of strings, halving their size.
+カスタムプロトコルは、とりわけ、GUID（ユーザーIDとして使用されます。
+システム）を文字列ではなくバイナリとして使用し、サイズを半分にします。
 
 (TODO)
 
-Compact message protocol
+コンパクトメッセージプロトコル
 ------------------------
-
-There is a custom, presumably non-Thrift binary protocol for sending messages.
+メッセージを送信するためのカスタムの、恐らく非リザーブのバイナリプロトコルがあります。
 
 (TODO)
