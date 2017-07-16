@@ -1,100 +1,100 @@
-LINE instant messenger protocol
+LINEインスタントメッセンジャープロトコル
 ===============================
 
 Matti Virkkunen <mvirkkunen@gmail.com>
 
-Document is accurate as of 2015-04-20.
+文書は2015年4月20日現在のものです。
 
-This unofficial document describes the LINE (by LINE Corporation/Naver) instant messenger protocol.
-The information is based mostly on reverse engineering and therefore accuracy is not guaranteed.
+この非公式の文書は、LINE（LINE Corporation / Naverによる）インスタントメッセンジャープロトコルについて説明しています。
+情報は主にリバースエンジニアリングに基づいているため、精度は保証されていません。
 
-Also, this document is unfinished. I'm expanding it as I go.
+また、この文書は未完成です。私は私が行くようにそれを拡大しています。
 
-Overview
+概要
 --------
 
-LINE as a whole consists of a number of web services because of their multitude of apps and
-subsystems, but the only service that's needed for replicating their desktop IM client's
-functionality is the TalkService.
+LINE全体としては、多数のWebサービスが多数あります。
+デスクトップIMクライアントの複製に必要な唯一のサービス
+機能はTalkServiceです。
 
-The protocol is based on a request-response architecture over HTTP(S), with a long poll return
-channel. Apache Thrift is used for serialization of message data.
+このプロトコルは、HTTP（S）を介した要求応答アーキテクチャに基づいており、長いポーリングリターン
+チャネル。 Apache Thriftは、メッセージデータのシリアル化に使用されます。
 
-Wire protocol
+ワイヤプロトコル
 -------------
 
-File: line.thrift (a presumably complete Thrift interface file obtained via reverse engineering)
+ファイル：line.thrift（リバースエンジニアリングによって得られた恐らく完全なThriftインターフェースファイル）
 
-The protocol is Apache Thrift TCompactProtocol via HTTPS to gd2.line.naver.jp:443. The HTTP request
-path is /S4 for most requests. Some specific requests use a different path, specified where
-relevant.
+プロトコルはApache Thrift TCompactProtocolからHTTPS経由でgd2.line.naver.jp:443になります。 HTTPリクエスト
+パスはほとんどのリクエストで/ S4です。いくつかの特定の要求は、異なるパスを使用します。
+関連性があります。
 
-Unencrypted HTTP also seems to work for the moment, but using it is a really bad idea security-wise.
-Naver itself seems to be currently transitioning to 100% HTTPS.
+暗号化されていないHTTPも現時点では機能しているようですが、それを使用するのはセキュリティ上の問題です。
+ネイバー自体は現在、100％HTTPSに移行しているようです。
 
-If using a keep-alive connection, headers from the first request can be persisted. Headers in
-following requests can temporarily override the persisted value. An HTTP header called X-LS is also
-involved. If you want to persist headers, you must remember the X-LS header value the server gives
-you and send it back in the next request. The values seem to be integers. The name could be short
-for "Line Server", and it's probably used so that load-balancers can direct the following responses
-back to the same server that knows the headers.
+キープアライブ接続を使用している場合は、最初の要求のヘッダーを永続化できます。ヘッダー
+後続のリクエストで永続化された値を一時的にオーバーライドできます。 X-LSと呼ばれるHTTPヘッダーもあります
+関与する。ヘッダーを永続化する場合は、サーバーが提供するX-LSヘッダー値を覚えておく必要があります
+次のリクエストでそれを送り返します。値は整数のようです。名前は短いかもしれない
+"Line Server"のために使用されています。おそらくロードバランサが次の応答を指示できるように使用されています
+ヘッダーを知っているサーバーと同じサーバーに戻します。
 
-By using persistent headers it's possible to send each request with just two headers - X-LS and
-Content-Length.
+永続ヘッダーを使用することにより、X-LSとX-LSの2つのヘッダーだけで各要求を送信することができます。
+コンテンツ長
 
-The official protocol seems to be to first make one request to get an authentication key, and then
-open a new connection so that the authentication key can be persisted along with the rest of the
-headers for the following requests.
+公式のプロトコルは、最初に認証キーを取得するように要求してから、
+新しい接続を開いて、認証キーを残りの
+次の要求のヘッダー。
 
-Types and concepts
+タイプとコンセプト
 ------------------
 
-Friends, chats and groups are identified by 32-digit hex GUIDs prefixed with one character for the
-type.
+友人、チャット、グループは、32文字の16進数のGUIDによって識別されます。
+タイプ。
 
-Internally any user is referred to as a Contact. Contacts are identified by a "mid" and the prefix
-is "u" (presumably for "user")
+内部的には、どのユーザーも連絡先と呼ばれます。連絡先は「ミッド」と接頭辞によって識別されます
+"u"（おそらく "user"の場合）です
 
-Chats are called Rooms and are identified by a "mid" which is prefixed by "r" (for "room"). Rooms
-are the lightweight multi-user chats that are created when you invite an extra user to a plain IM
-conversation with a contact. Groups are called Groups internally as well and are identified by an
-"id" which is prefixed with a "c" (presumably for "chat"). Groups are more permanent than chats and
-have extra data associated with them such as a name and an icon.
+チャットはルームと呼ばれ、 "ミッド"の前に "r"が付いています（ "ルーム"の場合）。部屋
+余分なユーザーをプレーンなIMに招待したときに作成される軽量のマルチユーザーチャットです
+連絡先との会話。グループは内部的にグループと呼ばれ、
+接頭辞に "c"が付いた "id"（おそらく "チャット"のため）。グループはチャットより永続的です
+それらに関連付けられた名前やアイコンなどの余分なデータがあります。
 
-Any message is represented by a Message object. Message IDs are numeric but they are stored as
-strings.
+どのメッセージもMessageオブジェクトで表されます。メッセージIDは数値ですが、
+文字列。
 
-Timestamps are millisecond precision UNIX time represented as 64-bit integers (TODO: check the
-timezone just in case)
+タイムスタンプは、64ビット整数で表されるミリ秒精度のUNIX時間です（TODO：
+タイムゾーンはちょうど）
 
-Message authentication
+メッセージ認証
 ----------------------
 
-The following HTTP headers are required for a successful request:
+要求が成功するには、次のHTTPヘッダーが必要です。
 
     X-Line-Application: DESKTOPWIN\t3.2.1.83\tWINDOWS\t5.1.2600-XP-x64
     X-Line-Access: authToken
 
-The \t escape sequence represents a tab character. Other X-Line-Application names exist, but this is
-one that works currently. An invalid application name results in an error.  The authToken is
-obtained via the login procedure.
+\tエスケープシーケンスはタブ文字を表します。その他のX-Line  - アプリケーション名は存在しますが、これは
+1つは現在働いています。アプリケーション名が無効であると、エラーが発生します。 authTokenは
+ログイン手順で取得します。
 
-Object storage server
+ストレージオブジェクトサーバー
 ---------------------
 
-Media files are stored on a separate server at http://os.line.naver.jp/ which is internally referred
-to as the "object storage server". Some files (such as message attachments) seem to require
-authentication with the same protocol as above, but some files (such as buddy icons) don't seem to
-require authentication.
+メディアファイルは、http://os.line.naver.jp/ の別のサーバーに保存されています。
+を「オブジェクト保管サーバー」とします。一部のファイル（メッセージ添付ファイルなど）には、
+上記と同じプロトコルで認証しますが、一部のファイル（バディアイコンなど）は
+認証が必要です。
 
-It serves files over both HTTP and HTTPS with the same authentication protocol as above.
+これは、上記と同じ認証プロトコルを使用して、HTTPとHTTPSの両方でファイルを処理します。
 
-Login procedure
+ログイン手続き
 ---------------
 
-This Thrift method issues a new authToken for an e-mail address and password combination. The
-request should be sent to the path /api/v4/TalkService.do to avoid having to specify an auth token
-when none exists yet (/S4 always requires an auth token).
+このThriftメソッドは、電子メールアドレスとパスワードの組み合わせに対して新しいauthTokenを発行します。ザ
+authトークンを指定する必要がないように、リクエストをパス/api/v4/TalkService.doに送信する必要があります
+まだ存在しない場合（/S4では常に認証トークンが必要です）。
 
     loginWithIdentityCredentialForCertificate(
         IdentityProvider.LINE, // identityProvider
@@ -105,7 +105,7 @@ when none exists yet (/S4 always requires an auth token).
         "hostname", // systemName (will show up in "Devices")
         "") // certificate (empty on first login - see login verification procedure below)
 
-The result structure is as follows:
+結果の構造は次のとおりです。
 
     struct LoginResult {
         1: string authToken;
@@ -115,34 +115,34 @@ The result structure is as follows:
         5: LoginResultType type;
     }
 
-After a successful login, the type is equal to SUCCESS (1) and the authToken field contains the
-X-Line-Access value to use in subsequent requests.
+ログインに成功すると、タイプはSUCCESS（1）に等しく、authTokenフィールドには
+X-Line - 後続の要求で使用するアクセス値。
 
-The official desktop client sends an encrypted e-mail/password involving RSA and no X-Line-Access
-header, but it works just as fine in plain text. (TODO: Include description of RSA login procedure)
+公式のデスクトップクライアントは、RSAを含む暗号化された電子メール/パスワードを送信し、X-Line-Accessは使用しません
+ヘッダーがありますが、プレーンテキストの場合と同じように機能します。 （TODO：RSAログイン手順の説明を含む）
 
-Login verification procedure
+ログインの確認手順
 ----------------------------
 
-In current versions, LINE now requires you to verify your identity using a PIN code when logging in
-to a desktop client for the first time. It seems this is partially based on geo-IP, as clients that
-had logged in before the verification procedure was added do not need to verify themselves. New
-logins will all likely need to be verified.
+現在のバージョンでは、ログインするときにPINコードを使用してIDを確認する必要があります
+はじめてデスクトップクライアントに送信します。これは部分的にジオIPに基づいているようです。
+検証手続きが追加される前にログインしていれば、自分自身を検証する必要はありません。新しい
+ログインはすべて確認される必要があります。
 
-When PIN verification is required, the login method returns a type of REQUIRE_DEVICE_CONFIRM (3)
-instead of SUCCESS (1). The pinCode field contains a PIN code to display to the user and the
-verifier field is set to a random token that is used to identify this verification session. The
-token stays the same for the whole process.
+PIN検証が必要な場合、loginメソッドはREQUIRE_DEVICE_CONFIRM（3）のタイプを返します。
+SUCCESS（1）の代わりに。 pinCodeフィールドには、ユーザーに表示するPINコードと、
+検証者フィールドは、この検証セッションを識別するために使用されるランダムトークンに設定される。ザ
+トークンはプロセス全体で同じままです。
 
-The client then issues an empty request to the HTTP path /Q with the X-Line-Access header set to the
-verifier token. This request blocks until the user enters the correct PIN code on their mobile
-device.
+次に、クライアントは、X-Line-AccessヘッダーをHTTPパス/ Qに設定してHTTPパス/ Qに空の要求を発行します。
+検証者トークン。この要求は、ユーザーがモバイルに正しいPINコードを入力するまでブロックされます
+デバイス。
 
-There doesn't seem to be a limit for incorrect PIN entries on the mobile device, but there is
-currently a three minute time limit. After this the token expires. The client keeps track of the
-time limit locally and aborts the request when it's over.
+モバイルデバイス上でPINの入力が間違っているとは限りませんが、
+現在3分の制限時間です。その後、トークンは失効します。クライアントは、
+時間制限がローカルにあり、要求が終了した時点で要求を中止します。
 
-A success response from /Q is JSON containing the following:
+/ Qからの成功応答は、以下を含むJSONです。
 
     {
         "timestamp": "946684800000",
@@ -152,13 +152,13 @@ A success response from /Q is JSON containing the following:
         }
     }
 
-After this response is received the client issues a loginWithVerifierForCertificate() call with the
-verifier token as the parameter. The server then returns a normal LoginReply message with the usual
-authToken. The LoginReply message also contains a certificate value (random hex string) which should
-be stored and used in future calls to loginWithIdentityCredentialForCertificate() to skip the
-validation step. If the certificate is not used, every login will prompt for PIN verification.
+この応答が受信されると、クライアントはloginWithVerifierForCertificate()呼び出しを発行します。
+検証者トークンをパラメータとして使用します。サーバーは通常のLoginReplyメッセージを返します
+authToken。 LoginReplyメッセージには証明書の値（ランダムな16進文字列）も含まれています。
+将来のloginWithIdentityCredentialForCertificate()の呼び出しで格納されて使用され、
+検証ステップ。証明書が使用されていない場合は、すべてのログインでPINの確認が求められます。
 
-If the token has already expired the response from /Q looks like the following:
+トークンがすでに期限切れになっている場合、/Qからの応答は次のようになります。
 
     {
         "timestamp": "946684800000",
@@ -166,74 +166,73 @@ If the token has already expired the response from /Q looks like the following:
         "errorMessage": "key+is+not+found%3A+the_verifier_token+NOT_FOUND"
     }
 
-Initial sync
+初期同期
 ------------
 
-After logging in the client sends out a sequence of requests to synchronize with the server. It
-seems some messages are not always sent - the client could be storing data locally somewhere and
-comparing with the revision ID from getLastOpRevision(). The client runs multiple sync sequences in
-parallel in order to make it faster.
+ログイン後、クライアントはサーバーと同期する一連の要求を送信します。それ
+一部のメッセージが常に送信されるとは思われません - クライアントはどこかにローカルにデータを格納している可能性があります。
+getLastOpRevision()のリビジョンIDと比較します。クライアントは、複数の同期シーケンスを
+それをより速くするために平行してください。
 
-There is no requirement to implement all or any of these sync operations in a third-party client.
+これらの同期操作のすべてまたはいずれかをサードパーティのクライアントに実装する必要はありません。
 
-### Sequence 1
+### シーケンス1
 
-This seems to be the main sync sequence.
+これは主な同期シーケンスのようです。
 
     getLastOpRevision()
 
-Gets the revision ID to use for the long poll return channel later. It's fetched first to ensure
-nothing is missed even if something happens during the sync procedure.
+後で長いポールリターンチャネルに使用するリビジョンIDを取得します。それが最初にフェッチされて確実に
+同期処理中に何かが発生しても何も見逃されません。
 
     getDownloads()
 
-Mystery. Probably not related to software updates as that is a separate call. Could be related to
-sticker downloads.
+神秘。おそらくそれは別々の呼び出しであるため、ソフトウェアの更新には関係しません。スタンプのダウンロードに関連する可能性があります。
 
     getProfile()
 
-Gets the currently logged in user's profile, which includes their display name and status message
-and so forth.
+現在ログインしているユーザーのプロファイルを取得します。プロファイルには、表示名とステータスメッセージが含まれます。
+等々。
 
     getSettingsAttributes(8458272)
-
-Gets some of the stored settings (the bits are NOTIFICATION_INCOMING_CALL, IDENTITY_IDENTIFIER,
+    
+保存された設定の一部を取得します。(the bits are NOTIFICATION_INCOMING_CALL, IDENTITY_IDENTIFIER,
 NOTIFICATION_DISABLED_WITH_SUB and PRIVACY_PROFILE_IMAGE_POST_TO_MYHOME)
 
     getAllContactIds()
 
-Gets all contact IDs added as friends.
+友人として追加されたすべての連絡先IDを取得します。
 
     getBlockedContactIds()
 
-List of blocked user IDs.
+ブロックされたユーザーIDのリスト。
 
     fetchNotificationItems()
 
-Mystery.
+神秘
 
-    getContacts(contactIds) - with IDs from the previous methods that fetched contact IDs
+    getContacts(contactIds) - 連絡先IDを取得した以前のメソッドのID
 
-Gets details for the users.
+そのユーザーの詳細を取得
 
     getGroupIdsJoined()
 
-Gets all groups current user is a member of.
+現在のユーザーがメンバーであるすべてのグループを取得します。
 
     getGroupIdsInvited()
 
-Gets all groups for which the user has a pending invitation.
+ユーザーが保留中の招待状を持つすべてのグループを取得します。
 
-    getGroups(groupIds) - with IDs from the previous methods
+    getGroups(groupIds) - 以前のメソッドのID
 
-Gets details for the groups. This included member lists.
+グループの詳細を取得します。これにはメンバーリストが含まれていました。
 
     getMessageBoxCompactWrapUpList(1, 50)
 
-Returns a complicated structure with "current active chats". This returns a list of of rooms and
-groups with partial information as well as the latest message(s) for them. This call seems to be the
-only way to get a list of rooms the current user is a member of as there is no separate getRooms
-method.
+「現在アクティブなチャット」を持つ複雑な構造を返します。これは部屋のリストを返します。
+グループには、部分的な情報と最新のメッセージが含まれています。この呼び出しは、
+別のgetRoomsがないので、現在のユーザーがメンバーである部屋のリストを取得する唯一の方法です
+方法。
 
 ### Sequence 2
 
