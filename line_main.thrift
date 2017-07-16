@@ -1,1 +1,1 @@
-! This file is no longer needed !
+! このファイルはもう必要ありません !
