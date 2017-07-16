@@ -1,20 +1,18 @@
-LINE instant messenger protocol documentation
+LINEインスタントメッセンジャープロトコルのドキュメント
 =============================================
 
-These files are the results of research into the LINE instant messenger protocol. The purpose of the
-research is to provide information about its inner workings and security to its users as well as
-produce documentation required to create compatible client software implementations.
+これらのファイルは、LINEインスタントメッセンジャープロトコルの研究結果です。その目的は
+研究は、その内部の動作とセキュリティに関する情報をユーザーに提供することだけでなく、
+互換性のあるクライアントソフトウェアの実装を作成するために必要なドキュメントを作成します。
 
-The information provided here was gathered by examining official LINE client software.
+ここで提供される情報は、公式のLINEクライアントソフトウェアを調べることによって収集されました。
 
-Files
+ファイル
 -----
 
-* **line-protocol.md:** Explanation of the wire protocol, the usage of the different functions and
-  other implementation details.
-* **line.thrift:** An Apache Thrift interface file produced by analyzing official LINE software.
-* **line_main.thrift:** A filtered version of line.thrift with only the core services required for
-  an instant messenger and some identifiers renamed for better compatibility with some programming
-  languages.
+* **line-protocol.md:** ワイヤプロトコルの説明、異なる機能の使用とその他の実装の詳細。
+* **line.thrift:** 公式のLINEソフトウェアを解析して生成されたApache Thriftインタフェースファイル。
+* **line_main.thrift:** フィルタリングされたline.thriftのバージョン
+  インスタントメッセンジャーといくつかの識別子はいくつかのプログラミングとのより良い互換性のために名前が変更されました
 
-*This work is not connected with LINE Corporation.*
+*この作品はLINE Corporationと関係はありません。*
