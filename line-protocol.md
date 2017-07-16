@@ -234,16 +234,16 @@ NOTIFICATION_DISABLED_WITH_SUB and PRIVACY_PROFILE_IMAGE_POST_TO_MYHOME)
 別のgetRoomsがないので、現在のユーザーがメンバーである部屋のリストを取得する唯一の方法です
 方法。
 
-### Sequence 2
+### シーケンス2
 
     getActivePurchaseVersions(0, 1000, "en", "US")
 
-Mystery. Probably related to sticker versions.
+神秘。おそらくスタンプのバージョンに関連しています。
 
-    getConfigurations(...) - parameters involve country codes
+    getConfigurations(...) - パラメータには国コードが含まれます
 
-Returns a map of configuration settings with string keys. I do not have exact metadata for this
-function. Example:
+文字列キーを使用した構成設定のマップを返します。私はこのための正確なメタデータを持っていません
+関数。例：
 
     {
       "function.linecall.mobile_network_expire_period": "604800",
@@ -258,21 +258,21 @@ function. Example:
       "room.max_size": "100"
     }
 
-Many of the settings seem to be related to features being enabled or disabled and maximum limits for
-them.
+設定の多くは、機能が有効または無効になっていること、および
+それら。
 
     getRecommendationIds()
 
-List of suggested friend IDs.
+提示されたフレンドIDのリスト。
 
     getBlockedRecommendationIds()
 
-List of suggested friend IDs that have been dismissed (why can't the previous method just not return
-these...?)
+友達から外された友人IDのリスト（以前の方法では戻れない
+これら...？）
 
-    getContacts(contactIds) - with IDs from the previous methods
+    getContacts(contactIds) - 以前のメソッドのID
 
-Managing the contact list
+連絡先リストの管理
 -------------------------
 
 Contacts have multiple statuses.
@@ -291,112 +291,110 @@ There is no separate function to delete a contact for some reason, instead it's 
 CONTACT_SETTING_DELETE setting. Even though it's a setting, this is equivalent to really deleting
 the friend - they won't appear on getallContactIds() anymore. (FIXME: actually test this...)
 
-Sending messages
+メッセージ送信の送信
 ----------------
 
-Messages are sent using the sendMessage() function.
+メッセージは、sendMessage()関数を使用して送信されます。
 
     sendMessage(seq, msg)
 
-The seq parameter doesn't seem to be matter, and can be sent as zero. The msg parameter is the
-Message object to send.
+seqパラメータは重要ではないようで、ゼロとして送信することができます。 msgパラメータは、
+送信するメッセージオブジェクト。
 
-The only required fields for a text message are "to", which can be the ID for any valid message
-recipient (user, chat or group), and the "text" field which is the text content to send. Other
-message types involve the contentMetadata fields and possibly uploading files to a separate server.
+テキストメッセージの唯一の必須フィールドは "to"です。これは有効なメッセージのIDです
+受信者（ユーザ、チャットまたはグループ）、および送信するテキストコンテンツである「テキスト」フィールドが含まれます。その他
+メッセージタイプにはcontentMetadataフィールドが含まれ、別のサーバーにファイルをアップロードする可能性があります。
 
-The return value from sendMessage is a partial Message object that only contains the fields "id",
-"createdTime" and "from". The ID is a numeric string that can be used to refer to that message
-later.
+sendMessageからの戻り値は、フィールド "id"のみを含む部分的なMessageオブジェクトです。
+"createdTime"と "from"。 IDは、後でそのメッセージを参照するために使用できる数値の文字列です。
 
-Message types
+メッセージのタイプ
 -------------
 
-LINE supports various types of messages from simple text messages to pictures and video. Each
-message has a contentType field that specifies the type of content, and some messages include
-attached files from various locations.
+LINEは、簡単なテキストメッセージから写真やビデオへのさまざまなタイプのメッセージをサポートします。各
+メッセージにはコンテンツタイプを指定するcontentTypeフィールドがあり、一部のメッセージには
+さまざまな場所から添付ファイル。
 
-Messages can contain extra attributes in the contentMetadata map. One globally used attribute is
-"BOT_CHECK" which is included with a value of "1" for automatic messages I've received from
-"official accounts" - this could be an auto-reply indicator.
+メッセージには、contentMetadataマップに余分な属性を含めることができます。 1つのグローバルに使用される属性は
+私が受け取った自動メッセージの値が「1」に含まれている「BOT_CHECK」
+「公式アカウント」 - これは自動応答のインジケータになる可能性があります。
 
 ### NONE (0)
 
-The first contentType is called NONE internally but is actually text. It's the simplest content
-type. The text field contains the message content encoded in UTF-8.
+最初のcontentTypeはNONEと呼ばれますが、実際はテキストです。それは最も簡単なコンテンツです
+タイプ。テキストフィールドには、UTF-8でエンコードされたメッセージコンテンツが含まれます。
 
-The only thing to watch out for is emoji which are sent as Unicode private use area codepoints.
+注意すべき唯一のことは、Unicode専用エリアのコードポイントとして送信される絵文字です。
 
-Example:
+例：
 
     client.sendMessage(0, line.Message(
         to="u0123456789abcdef0123456789abcdef",
         contentType=line.ContentType.NONE,
         text="Hello, world!"))
 
-TODO: make a list of emoji
+TODO: 絵文字のリストの作成
 
 ### IMAGE (1)
+受信
+#### 
 
-#### Receiving
+画像メッセージのコンテンツは、2つの方法のいずれかで配信できます。
 
-Image message content can be delivered in one of two ways.
+通常の画像メッセージの場合、プレビュー画像はプレーンJPEGとしてcontentPreviewフィールドに含まれます。
+しかし、何らかの理由で、公式のデスクトップクライアントはそれを無視して、むしろオブジェクト保管サーバーからダウンロードします
 
-For normal image messages, a preview image is included as a plain JPEG in the contentPreview field.
-However, for some reason the official desktop client seems to ignore it and rather downloads
-everything from the object storage server.
+プレビュー画像URLはhttp://os.line.naver.jp/os/m/MSGID/preview で、フルサイズの画像URL
+http://os.line.naver.jp/os/m/MSGID MSGIDはメッセージのIDフィールドです。
 
-The preview image URLs are http://os.line.naver.jp/os/m/MSGID/preview and the full-size image URL
-are http://os.line.naver.jp/os/m/MSGID where MSGID is the message's id field.
-
-"Official accounts" broadcast messages to many clients at once, so their image message data is
-stored on publicly accessible servers (currently seems to be Akamai CDN). For those messages no
-embedded preview is included and the image URLs are stored in the contentMetadata map with the
-following keys:
+「公式アカウント」は一度に多くのクライアントにメッセージをブロードキャストするので、その画像メッセージデータは
+（現在はアカマイのCDNと思われる）公開されているサーバーに保存されています。これらのメッセージの場合、
+埋め込みプレビューが含まれ、画像のURLはcontentMetadataマップに
+以下のキー：
 
 * PREVIEW_URL = absolute URL for preview image
 * DOWNLOAD_URL = absolute URL for full-size image
 * PUBLIC = "TRUE" (haven't seen other values)
 
-As an example of a publicly available image message, have a Pikachu:
+公開されている画像メッセージの例として、ピカチュウ：
 
 http://dl-obs.official.line.naver.jp/r/talk/o/u3ae3691f73c7a396fb6e5243a8718915-1379585871
 
-#### Sending
+#### 送信
 
-Sending an image message is done in two steps. First a Thrift sendMessage call is used to obtain a
-message ID, and then the image data is uploaded to the Object Storage Server with a separate HTTP
-upload request.
+画像メッセージの送信は2つのステップで行われます。まず、ThriftのsendMessageコールを使用して、
+メッセージIDに変換され、その後、イメージデータは別のHTTPを使用してオブジェクトストレージサーバーにアップロードされます
+アップロードリクエスト。
 
-The message will not be delivered to the recipient until the HTTP upload is complete. The official
-client displays messages in the order of the sendMessage calls, even if the image data is uploaded
-much later. It might be possible to have fun by "reserving" a spot for an image message in a
-conversation and then filling it in later. It's unknown if there's an internal timeout for uploading
-the image data.
+HTTPアップロードが完了するまで、メッセージは受信者に配信されません。公式
+クライアントは、画像データがアップロードされていても、sendMessage呼び出しの順番でメッセージを表示します
+かなり後に。画像メッセージのためにスポットを「予約する」ことによって楽しい時間を過ごすことは可能かもしれません。
+会話をし、後でそれを記入してください。アップロードに内部タイムアウトがあるかどうかは不明です
+画像データ。
 
-In order to send an image message, first send a message normally with contentType=1 (IMAGE) and make
-note of the returned message ID. The official client also puts "1000000000" in the text field. The
-meaning of this is unknown and it's not required.
+イメージメッセージを送信するには、まずcontentType = 1（IMAGE）のメッセージを通常送信し、
+返されたメッセージIDの注記。公式のクライアントは、テキストフィールドに "1000000000"と入力します。ザ
+この意味は不明であり、必須ではありません。
 
-The upload HTTP request is a multipart/form-data ("file upload") POST request to the URL:
+アップロードHTTPリクエストは、URLへのmultipart / form-data（「ファイルアップロード」）POSTリクエストです。
 
 https://os.line.naver.jp/talk/m/upload.nhn
 
-The request uses the usual X-Line-Application and the X-Line-Access headers for authentication.
-There are two fields in the multipart request. The first field is called "params" and the content is
-a JSON object containing among other things the message ID. There is on Content-Type header.
+この要求では、通常のX-Line-ApplicationヘッダーとX-Line-Accessヘッダーが認証に使用されます。
+マルチパートリクエストには2つのフィールドがあります。最初のフィールドは「params」と呼ばれ、コンテンツは
+メッセージIDを含むJSONオブジェクト。 Content-Typeヘッダがあります。
 
 {"name":"1.jpg","oid":"1234567890123","size":28878,"type":"image","ver":"1.0"}
 
-The name field does not seem to be used for anything. oid should be set to the message ID obtained
-earlier. size should be set to the size of the image file to upload.
+名前フィールドは何のためにも使われていないようです。 oidは取得したメッセージIDに設定する必要があります
+早くサイズは、アップロードするイメージファイルのサイズに設定する必要があります。
 
-The second field is called "file" with a filename argument, has a Content-Type header, and contains
-the image data itself. The filename and Content-Type headers seem to be ignored and the image format
-is automatically detected. At least JPEG and PNG data is supported for uploading, but everything is
-converted to JPEG by the server.
+2番目のフィールドはfilename引数を持つ "file"と呼ばれ、Content-Typeヘッダーを持ち、
+画像データそのもの。 filenameとContent-Typeヘッダーは無視され、イメージフォーマット
+自動的に検出されます。アップロードには少なくともJPEGとPNGデータがサポートされていますが、すべてが
+サーバーによってJPEGに変換されます。
 
-Example sendMessage call:
+sendMessage呼び出しの例:
 
     # First send the message by using sendMessage
     result = client.sendMessage(0, line.Message(
@@ -406,7 +404,7 @@ Example sendMessage call:
     # Store the ID
     oid = result.id
 
-Example HTTP upload:
+HTTPアップロードの例:
 
     POST /talk/m/upload.nhn HTTP/1.1
     Content-Length: 29223
@@ -426,70 +424,70 @@ Example HTTP upload:
     ...image data...
     --separator-CU3U3JIM7B17R0C4SIWX1NS7I1G0LV6BF76GPTNN--
 
-### STICKER (7)
+### スタンプ (7)
 
-Sticker messages are simply a reference to a separately hosted image file. The information required
-to reference a sticker is contained in the contentMetadata map.
+ステッカーメッセージは、個別にホストされたイメージファイルへの参照に過ぎません。必要な情報
+ステッカーの参照はcontentMetadataマップに含まれています。
 
-A sticker reference consists of three numbers, the STKVER (sticker version), STKPKGID (sticker
-package ID) and STKID (sticker ID within package). To send a sticker, a message with contentType=7
-and these three values specified are enough. When receiving a sticker some stickers also return a
-meaningful textual name for the sticker in the STKTXT metadata field - this is added automatically
-and does not need to be specified when sending.
+ステッカーの参照は、STKVER（ステッカーバージョン）、STKPKGID（ステッカー
+パッケージID）とSTKID（パッケージ内のステッカーID）。ステッカーを送るには、contentType = 7のメッセージ
+これらの3つの値で十分です。ステッカーを受け取ると、ステッカーも
+STKTXTメタデータフィールドのステッカーの意味のあるテキスト名 - これは自動的に追加されます
+送信時に指定する必要はありません。
 
-Sticker image files are hosted on yet another CDN server at dl.stickershop.line.naver.jp. The CDN
-server does not require authentication and can be viewed with a plain browser for testing. The base
-URL for a sticker package is formed from the STKVER and STKPKGID values. First, the version is split
-into three numbers as follows:
+ステッカーイメージファイルは、dl.stickershop.line.naver.jpのさらに別のCDNサーバーでホストされています。 CDN
+サーバーは認証を必要とせず、テストのためにプレーンなブラウザで見ることができます。本拠
+ステッカーパッケージのURLは、STKVERおよびSTKPKGIDの値から形成されます。まず、バージョンが分割されている
+次の3つの数字に変換します。
 
     VER = floor(STKVER / 1000000) + "/" + floor(STKVER / 1000) + "/" + (STKVER % 1000)
 
-Using this the package base URL can be determined:
+これを使用して、パッケージのベースURLを決定することができます。
 
 http://dl.stickershop.line.naver.jp/products/{VER}/{STKPKGID}/{PLATFORM}/
 
-PLATFORM is a platform identifier which is presumably used to deliver different image sizes etc to
-different platforms. The "WindowsPhone" platform seems to have most interesting files. Other known
-platforms are "PC". Not all platforms contain all file types.
+PLATFORMは、異なる画像サイズなどを配信するためにおそらく使用されるプラットフォーム識別子です。
+異なるプラットフォーム。 「WindowsPhone」プラットフォームには、最も興味深いファイルがあるようです。その他の既知の
+プラットフォームは「PC」です。すべてのプラットフォームにすべてのファイルタイプが含まれているわけではありません。
 
-Sticker package version 100, package 1 ("Moon & James") is used as an example in the following URLs.
-Substitute another package base URL to see other packages.
+ステッカーパッケージバージョン100、パッケージ1（「Moon＆James」）は、次のURLの例として使用されています。
+他のパッケージを見るには別のパッケージのベースURLに置き換えてください。
 
-The sticker package contains a metadata file for a listing its contents:
+ステッカーパッケージには、内容を一覧表示するためのメタデータファイルが含まれています。
 
 http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/productInfo.meta
 
-This is a JSON file with metadata about the stickers in this package including names in multiple
-languages, the price in multiple currencies and a list of stickers.
+これは、このパッケージ内のステッカーに関するメタデータを含むJSONファイルで、複数の名前
+言語、複数の通貨での価格、ステッカーのリスト。
 
-Each package also has an icon:
+各パッケージにはアイコンもあります：
 
-http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/tab_on.png - active
+http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/tab_on.png - アクティブ
 
-http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/tab_off.png - dimmed
+http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/tab_off.png - 灰色
 
-Each referenced sticker image is available in the subdirectory "stickers" as a PNG image. The
-filename is {STKID}.png for the full image and {STKID}_key.png for a thumbnail.
+参照される各ステッカーイメージは、PNGイメージとしてサブディレクトリー「ステッカー」で使用できます。ザ
+ファイル名はサムネイルの場合は{STKID} .png、サムネイルの場合は{STKID} _key.pngです。
 
-http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/stickers/13.png - full size
+http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/stickers/13.png - フルサイズ
 
-http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/stickers/13_key.png - thumbnail
+http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/stickers/13_key.png - サムネイル
 
-All sticker images as well as the icons can be downloaded as a single package from:
+すべてのステッカーイメージとアイコンは、以下から単一のパッケージとしてダウンロードできます。
 
 http://dl.stickershop.line.naver.jp/products/0/0/100/1/WindowsPhone/stickers.zip
 
-The ShopService is used with the path /SHOP4 to get a list of sticker packages the current user has.
-TODO: specify more
+ShopServiceはパス/ SHOP4とともに使用され、現在のユーザーが持つステッカーパッケージのリストを取得します。
+TODO：もっと指定する
 
-Interestingly the official client sends some emoji as a sticker message instead of a plain text
-message if the message content consists only of the single emoji. Emoji as stickers are in package
-number 5: (TODO: figure out how they're mapped)
+面白いことに、公式のクライアントは、平文の代わりにステレオメッセージとして絵文字を送信します
+メッセージの内容が単一の絵文字のみで構成されている場合、メッセージステッカーとしての絵文字はパッケージに入っています
+5番：（TODO：マッピング方法を理解する）
 
 http://dl.stickershop.line.naver.jp/products/0/0/100/5/WindowsPhone/productInfo.meta
 
-The official clients also contain references to "old" stickers that have no STKVER or STKPKGID and
-use a URL of the format:
+正式な顧客には、STKVERまたはSTKPKGIDを持たない「古い」ステッカーへの言及も含まれています。
+次の形式のURLを使用します。
 
 http://line.naver.jp/stickers/android/{STKID}.png
 
